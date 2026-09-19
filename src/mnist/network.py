@@ -8,6 +8,8 @@ from scipy.special import softmax
 
 from mnist import SEED
 
+# Each weight row contains the incoming weights for one output neuron
+# Feature counts are specific to each layer, not shared across all layers
 WeightMatrix = Float32[np.ndarray, "out_features in_features"]
 BiasVector = Float32[np.ndarray, "out_features"]
 
@@ -89,7 +91,11 @@ class Network:
         list[Float32[np.ndarray, "batch_size width"]],
         Float32[np.ndarray, "batch_size output_dimension"],
     ]:
-        """Performs a forward pass using ReLU activation. Returns (activations, logits)."""
+        """Returns (activations, logits), using ReLU for the hidden layers.
+
+        activations: one array per hidden layer. rows are examples, columns are neuron activations.
+        logits: rows are examples, columns are output classes, values are unnormalized.
+        """
         activations = []
 
         activation = X
@@ -108,25 +114,38 @@ class Network:
         activations: list[Float32[np.ndarray, "batch_size width"]],
         logits: Float32[np.ndarray, "batch_size output_dimension"],
     ) -> Gradients:
-        """Computes and returns the gradients using softmax and cross-entropy."""
-        probabilities = softmax(logits, axis=1)
-        grad_logits = probabilities.copy()
+        """Computes gradients for the batch's mean softmax cross-entropy loss.
+
+        Each returned gradient has the same shape as its corresponding weight or bias.
+        """
+        grad_logits = softmax(logits, axis=1)  # probabilities
+        # convert probabilities to per-example logit gradients: softmax(logits) - one_hot(y)
         grad_logits[np.arange(len(y)), y] -= 1
+        # scale to get gradients of the batch's mean loss
         grad_logits /= len(y)
 
         grad_weights = [np.empty_like(weight) for weight in self.weights]
         grad_biases = [np.empty_like(bias) for bias in self.biases]
 
+        # grad is dC/d(current layer's pre-activations), where C is the batch's mean loss
         grad = grad_logits
 
         for i in reversed(range(len(self.weights))):
             previous_activation = X if i == 0 else activations[i - 1]
 
+            # multiply by activation of previous layer to get gradient w.r.t. weights
+            # sums across all examples implicitly
             grad_weights[i] = grad.T @ previous_activation
+
+            # multiply by 1 to get gradient w.r.t. biases
+            # sum across all examples explicitly
             grad_biases[i] = np.sum(grad, axis=0)
 
             if i > 0:
+                # multiply by weights of current layer to get gradient w.r.t. previous layer's activations
+                # sums across all neurons of current layer
                 grad = grad @ self.weights[i]
+                # multiply by derivative of ReLU to get gradient w.r.t. previous layer's pre-activations
                 grad *= previous_activation > 0
 
         return Gradients(

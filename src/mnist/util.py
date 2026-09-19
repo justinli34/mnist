@@ -25,8 +25,8 @@ def split_data(
     npt.NDArray[np.float32],
     npt.NDArray[np.int64],
 ]:
-    """
-    Returns (X_first, y_first, X_second, y_second) after shuffling.
+    """Returns (X_first, y_first, X_second, y_second) after shuffling.
+
     split_ratio: fraction of examples in the second split.
     """
     rng = np.random.default_rng(SEED)
