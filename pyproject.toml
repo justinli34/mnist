@@ -1,0 +1,31 @@
+[project]
+name = "mnist"
+version = "0.1.0"
+description = "MLP Implementation in NumPy for MNIST"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "jaxtyping>=0.3.11",
+    "matplotlib>=3.11.2",
+    "scipy>=1.18.1",
+    "torchvision>=0.29.0",
+]
+
+[project.scripts]
+mnist = "mnist.main:main"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+ignore = ["UP037"]
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.8",
+    "ty>=0.0.82",
+]
